@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <ios>
+#include <unistd.h>
 
 #include "xxtea.cpp"
 
@@ -17,6 +18,7 @@ vector<bool> generate_msg(){
 	// Generate two random unsigned integers for our data field
 	uint32_t data1 = (uint32_t) rand();
 	uint32_t data2 = (uint32_t) rand();
+	int arb = rand() % 30;
 	
 	// If encrypt is true:
 	if(encrypt){
@@ -25,7 +27,7 @@ vector<bool> generate_msg(){
 	}
 	
 	// Convert certain fields to bitset format
-	std::bitset<11> arbitration (9999);
+	std::bitset<11> arbitration (arb);
 	std::bitset<4> dlc (8);
 	std::bitset<32> data32_0 (data1);
 	std::bitset<32> data64_32 (data2);
@@ -72,6 +74,8 @@ int main(){
 	int msg_idx = 0;			// tracks the current bit in mynextmsg
 	vector<bool> othermsg;
 	
+	cout << "Node active." << endl;
+	
 	while (true){
 		
 		// If bus is not currently at the end of file, get the next character
@@ -82,7 +86,8 @@ int main(){
 			// If I'm currently sending a message and I receive someone else's bit, check whether the other person has priority or not
 			if (msg_idx < mynextmsg.size()){
 				if (mynextmsg[msg_idx] == 1 && nextbit == 0){
-					
+					cout << "\n" << "Pausing for higher priority transmission." << endl; 
+					usleep(500000);		// Pause for 500,000 microseconds (0.5 seconds)
 				}
 			}
 		}
@@ -97,6 +102,7 @@ int main(){
 			if (bus_stream.eof()){
 				bus_stream << (int) mynextmsg[msg_idx];
 				bus_stream.ignore(1);
+				cout << (int) mynextmsg[msg_idx];	// Print the sent bit
 				msg_idx++;
 			}
 		}
@@ -105,6 +111,7 @@ int main(){
 		if (msg_idx >= mynextmsg.size() && rand() % 5 == 1){
 			mynextmsg = generate_msg();
 			msg_idx = 0;
+			cout << "New message." << endl;
 		}
 	}
 	

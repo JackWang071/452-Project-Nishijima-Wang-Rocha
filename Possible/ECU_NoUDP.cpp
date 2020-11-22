@@ -4,15 +4,14 @@
 #include <bitset>
 #include <cstdlib>
 #include <fstream>
-#include <ios>
 #include <unistd.h>
 
 #include "xxtea.cpp"
 
-string bus_file = "bus";
+std::string bus_file = "bus";
 uint32_t const teakey[4] = {2712847316, 3858147256, 3385909746, 2746533334};
 
-vector<bool> generate_msg(){
+std::vector<bool> generate_msg(){
 	bool encrypt = false;
 	
 	// Generate two random unsigned integers for our data field
@@ -22,8 +21,8 @@ vector<bool> generate_msg(){
 	
 	// If encrypt is true:
 	if(encrypt){
-		xxtea::btea(&data1, 2, teakey);
-		xxtea::btea(&data2, 2, teakey);
+		btea(&data1, 2, teakey);
+		btea(&data2, 2, teakey);
 	}
 	
 	// Convert certain fields to bitset format
@@ -31,17 +30,17 @@ vector<bool> generate_msg(){
 	std::bitset<4> dlc (8);
 	std::bitset<32> data32_0 (data1);
 	std::bitset<32> data64_32 (data2);
-	string full_data = data64_32.to_string() + data32_0.to_string();
+	std::string full_data = data64_32.to_string() + data32_0.to_string();
 	std::bitset<15> crc (9999);
 	
 	
 	
 	
 	// Create a vector of booleans to represent this message
-	vector<bool> frame = vector<>(108);
+	std::vector<bool> frame = std::vector<bool>(108);
 	frame[0] = 0;	// Start of frame
 	for (int i = 1; i <= 11; i++){	// 1:11 Identifier
-		frame[i] = arbitration
+		frame[i] = arbitration[i-1];
 	}
 	frame[12] = 0;	// 12 Remote transmission request
 	frame[13] = 0;	// 13 Identifier extension bit
@@ -66,15 +65,14 @@ vector<bool> generate_msg(){
 }
 
 int main(){
-	fstream bus_stream; //fstream object
-	bus_stream.open(bus_file, ios::in|ios::out); //open for input and output
+	std::fstream bus_stream (bus_file, std::fstream::in|std::fstream::app); //fstream object open for reading and appending
 	
 	char nextbit;
-	vector<bool> mynextmsg;
+	std::vector<bool> mynextmsg;
 	int msg_idx = 0;			// tracks the current bit in mynextmsg
-	vector<bool> othermsg;
+	std::vector<bool> othermsg;
 	
-	cout << "Node active." << endl;
+	std::cout << "Node active." << std::endl;
 	
 	while (true){
 		
@@ -86,7 +84,7 @@ int main(){
 			// If I'm currently sending a message and I receive someone else's bit, check whether the other person has priority or not
 			if (msg_idx < mynextmsg.size()){
 				if (mynextmsg[msg_idx] == 1 && nextbit == 0){
-					cout << "\n" << "Pausing for higher priority transmission." << endl; 
+					std::cout << "\n" << "Pausing for higher priority transmission." << std::endl; 
 					usleep(500000);		// Pause for 500,000 microseconds (0.5 seconds)
 				}
 			}
@@ -102,7 +100,7 @@ int main(){
 			if (bus_stream.eof()){
 				bus_stream << (int) mynextmsg[msg_idx];
 				bus_stream.ignore(1);
-				cout << (int) mynextmsg[msg_idx];	// Print the sent bit
+				std::cout << (int) mynextmsg[msg_idx];	// Print the sent bit
 				msg_idx++;
 			}
 		}
@@ -111,12 +109,12 @@ int main(){
 		if (msg_idx >= mynextmsg.size() && rand() % 5 == 1){
 			mynextmsg = generate_msg();
 			msg_idx = 0;
-			cout << "New message." << endl;
+			std::cout << "New message." << std::endl;
 		}
 	}
 	
 	if(bus_stream.is_open()){
 		bus_stream.close();
 	}
-	return 1
+	return 1;
 }

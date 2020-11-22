@@ -33,9 +33,6 @@ std::vector<bool> generate_msg(){
 	std::string full_data = data64_32.to_string() + data32_0.to_string();
 	std::bitset<15> crc (9999);
 	
-	
-	
-	
 	// Create a vector of booleans to represent this message
 	std::vector<bool> frame = std::vector<bool>(108);
 	frame[0] = 0;	// Start of frame
@@ -99,8 +96,8 @@ int main(){
 			// If nobody else is sending, send next bit
 			if (bus_stream.eof()){
 				bus_stream << (int) mynextmsg[msg_idx];
-				bus_stream.ignore(1);
-				std::cout << (int) mynextmsg[msg_idx];	// Print the sent bit
+				bus_stream.get();
+				std::cout << mynextmsg[msg_idx];	// Print the sent bit
 				msg_idx++;
 			}
 		}

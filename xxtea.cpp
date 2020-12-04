@@ -15,7 +15,7 @@ if n is zero result is 1 and no coding or decoding takes place, otherwise the re
 assumes 32 bit (4 byte) words and same endian coding and decoding
 minimum 64 bit (8 byte) block size
 */
-void btea(uint32_t *v, int n, uint32_t const key[4]) {
+static void btea(uint32_t *v, int n, uint32_t const key[4]) {
 // y: 
 // z: 
 // sum: 

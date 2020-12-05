@@ -4,10 +4,15 @@
 
 #include "ECU.h"
 
+int ECU::ID_vals = 0;
+
 ECU::ECU(CAN_Component* new_bus){
 	ECU::bus = new_bus;
-	ECU::ones_counter = 0;
-	ECU::bus->connect_component(this);
+	ECU::msg_idx = 0;
+	ECU::bitclock = 0;
+	ECU::until_transmit_start = 0;
+	ECU::ECU_ID = ++ECU::ID_vals;
+	bus->connect_component(this);
 }
 
 int ECU::connect_component(CAN_Component* new_comp){
@@ -15,72 +20,63 @@ int ECU::connect_component(CAN_Component* new_comp){
 	return 0;
 }
 
-// Return true if arbitration indicates that this ECU's message has priority
-bool ECU::arbitration(std::vector<bool> my_msg){
-	int last_delimiter = ECU::msg_transitions.back();
-	
-	// Check that the other message is still in arbitration phase.
-	if(ECU::recv_buffer.size() - last_delimiter < 11){
-		for(int i = 0; i < ECU::recv_buffer.size() - last_delimiter; i++){
-			// If my_msg has a 0 where the other message has a 1, then this ECU has priority
-			if(my_msg[i] < ECU::recv_buffer[i+last_delimiter]){
-				return true;
-			}
-			if(my_msg[i] > ECU::recv_buffer[i+last_delimiter]){
-				return false;
-			}
-		}
-	}
-	
-	return false;
-}
-
 /*
 {1, 1, 1, 0, 0, 1, 0, 1}
 {0, 1, 0, 0}
 */
 
+// Interface to allow the bus to add a new bit to ECU's recvbuffer
 int ECU::recv_msg(bool nextbit){
 	ECU::recv_buffer.push_back(nextbit);
-	// If a transition to another message is detected, then note the transition's position in recv_buffer
-	if(ECU::ones_counter==9 && nextbit==0){
-		ECU::msg_transitions.push_back(ECU::recv_buffer.size());
-	}
-	if(nextbit==1){
-		ECU::ones_counter++;
-	}
-	else{
-		ECU::ones_counter = 0;
+	// Receiving a new bit from another ECU may cause this ECU to stop sending
+	if(ECU::bitclock >= ECU::until_transmit_start){
+		// If this ECU is still sending:
+		if(ECU::msg_idx < ECU::send_buffer.size()){
+			//
+			if(nextbit != ECU::send_buffer[ECU::msg_idx]){
+				ECU::until_transmit_start = ECU::bitclock + 120;  // force transmission to pause for a while
+				std::cout << "ECU-" << ECU::ECU_ID << " pauses." << std::endl;
+			}
+		}
+		// If this ECU is not sending, then 
+		else{
+			ECU::until_transmit_start = ECU::bitclock + 120;  // force transmission to pause for a while
+			std::cout << "ECU-" << ECU::ECU_ID << " pauses." << std::endl;
+		}
 	}
 	return 0;
 }
 
-int ECU::run(){
-	std::vector<bool> mynextmsg;
-	int msg_idx = 0;			// tracks the current bit in mynextmsg
-	
+// Infinite loop to allow ECU to generate and send messages
+int ECU::sending(){
 	// Print message to show that this ECU is active.
-	std::cout << "Node active." << std::endl;
+	std::cout << "ECU-" << ECU::ECU_ID << " active." << std::endl;
 	
-	while(true){
+	int num_messages = 0;
+	while(num_messages < 20){
+		ECU::bitclock++;
 		/** Send the next bit of my message if all of these are true:
 		 *	Nobody else is sending
 		 *	I have priority
 		 *	There are unsent bits in my message
 		 */
-		if (msg_idx < mynextmsg.size() && ECU::arbitration(mynextmsg) == true){
-			ECU::bus->recv_msg(mynextmsg[msg_idx]);
-			std::cout << mynextmsg[msg_idx];
+		if (ECU::msg_idx < ECU::send_buffer.size() && ECU::bitclock >= ECU::until_transmit_start){
+			ECU::bus->recv_msg(ECU::send_buffer[ECU::msg_idx]);
+			std::cout << ECU::send_buffer[ECU::msg_idx];
+			ECU::msg_idx++;
 		}
-		else{
+		if (ECU::msg_idx == ECU::send_buffer.size()) {
+			msg_idx++;
+			num_messages++;
 			std::cout<<std::endl;
 		}
 		
 		// If not currently sending a message, generate a new message at random time intervals
-		if (msg_idx >= mynextmsg.size() && rand() % 5 == 1){
-			mynextmsg = generate_msg();
-			msg_idx = 0;
-			std::cout << "New message." << std::endl;
+		if (ECU::msg_idx >= ECU::send_buffer.size() && rand() % 5 == 1){
+			ECU::send_buffer = generate_msg();
+			ECU::msg_idx = 0;
+			
+			std::cout << "ECU-" << ECU::ECU_ID << ": ";
 		}
 	}
 	return 0;
@@ -88,50 +84,53 @@ int ECU::run(){
 
 // Generate a random CAN data frame and encrypt the data field using XXTEA, if so specified.
 std::vector<bool> ECU::generate_msg(){
-	bool encrypt = false;
+	bool encrypt = true;
 	
 	// Generate two random unsigned integers for our data field
 	uint32_t data1 = (uint32_t) rand();
 	uint32_t data2 = (uint32_t) rand();
-	int arb = rand() % 30;
+	
+	std::cout<< "ECU-" << ECU::ECU_ID << ": " <<data2<<" "<<data1<<std::endl;
+	
+	int arb_val = rand() % 30;
 	
 	// If encrypt is true:
-	if(encrypt){
+	if(encrypt == true){
 		btea(&data1, 2, ECU::teakey);
 		btea(&data2, 2, ECU::teakey);
 	}
 	
 	// Convert certain fields to bitset format
-	std::bitset<11> arbitration (arb);
-	std::bitset<4> dlc (8);
+	std::bitset<11> arb_bitset (arb_val);
+	std::bitset<4> dlc_bitset (8);
 	std::bitset<32> data32_0 (data1);
 	std::bitset<32> data64_32 (data2);
-	std::string full_data = data64_32.to_string() + data32_0.to_string();
-	std::bitset<15> crc (9999);
+	std::bitset<64> data_bitset (data64_32.to_string() + data32_0.to_string());
+	std::bitset<15> crc_bitset (9999);
 	
 	// Create a vector of booleans to represent this message
-	std::vector<bool> frame = std::vector<bool>(108);
-	frame[0] = 0;	// Start of frame
-	for (int i = 1; i <= 11; i++){	// 1:11 Identifier
-		frame[i] = arbitration[i-1];
+	std::vector<bool> frame;
+	frame.push_back(0);	// Start of frame
+	for (int i = 0; i <= arb_bitset.size(); i++){	// 1:11 Identifier
+		frame.push_back(arb_bitset[i]);
 	}
-	frame[12] = 0;	// 12 Remote transmission request
-	frame[13] = 0;	// 13 Identifier extension bit
-	frame[14] = 0;	// 14 Reserved bit
-	for (int i = 15; i <= 18; i++){	// 15:18 Data length code
-		frame[i] = dlc[i-15];
+	frame.push_back(0);	// 12 Remote transmission request
+	frame.push_back(0);	// 13 Identifier extension bit
+	frame.push_back(0);	// 14 Reserved bit
+	for (int i = 0; i < dlc_bitset.size(); i++){	// 15:18 Data length code
+		frame.push_back(dlc_bitset[i]);
 	}
-	for (int i = 19; i <= 82; i++){	// 19:[82] Data field
-		frame[i] = full_data.at(i-19);
+	for (int i = 0; i < data_bitset.size(); i++){	// 19:[82] Data field
+		frame.push_back(data_bitset[i]);
 	}
-	for (int i = -25; i <= -11; i++){	// -25:-11 Cyclic redundancy check 
-		frame[i] = crc[i+25];
+	for (int i = 0; i < crc_bitset.size(); i++){	// [82]:[96] Cyclic redundancy check 
+		frame.push_back(crc_bitset[i]);
 	}
-	frame[-10] = 0;	// -10 CRC delimiter
-	frame[-9] = 1;	// -9 ACK slot
-	frame[-8] = 1;	// -8 ACK delimiter
-	for (int i = -7; i <= -1; i++){		// -7:-1 End of frame
-		frame[i] = 1;
+	frame.push_back(0);	// -10 CRC delimiter
+	frame.push_back(1);	// -9 ACK slot
+	frame.push_back(1);	// -8 ACK delimiter
+	for (int i = 0; i < 7; i++){		// -7:-1 End of frame
+		frame.push_back(1);
 	}
 	
 	return frame;

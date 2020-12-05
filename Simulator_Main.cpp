@@ -6,13 +6,16 @@
 int main(){
 	
 	Bus* bus = new Bus();
-	ECU ecu1 = new ECU(bus);
-	ECU ecu2 = new ECU(bus);
+	ECU* ecu1 = new ECU(bus);
+	ECU* ecu2 = new ECU(bus);
 	
-	std::thread e1(&ECU::run, &ecu1);
+	
+	std::thread e1(&ECU::sending, ecu1);
+	std::thread e2(&ECU::sending, ecu2);
+	
 	e1.join();
-	std::thread e2(&ECU::run, &ecu2);
 	e2.join();
+	//*/
 	
 	return 0;
 }

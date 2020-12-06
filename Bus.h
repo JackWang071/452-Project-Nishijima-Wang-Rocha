@@ -12,12 +12,13 @@
 
 class Bus : public CAN_Component{
 	private:
-	std::vector<CAN_Component*> ecu_list;
+	std::vector<CAN_Component> ecu_list;
 	
 	public:
 	Bus();
-	int connect_component(CAN_Component* new_comp);
+	int connect_component(CAN_Component& new_comp);
 	int recv_msg(bool nextbit);
+	int test_conn();
 };
 
 #endif // !Bus_H

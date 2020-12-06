@@ -4,10 +4,16 @@
 
 #include "CAN_Component.h"
 
-int CAN_Component::connect_component(CAN_Component* new_comp){
+CAN_Component::CAN_Component(){}
+
+int CAN_Component::connect_component(CAN_Component& new_comp){
 	return 0;
 }
 int CAN_Component::recv_msg(bool nextbit){
+	return 0;
+}
+int CAN_Component::test_conn(){
+	std::cout<<"CAN component is connected."<<std::endl;
 	return 0;
 }
 

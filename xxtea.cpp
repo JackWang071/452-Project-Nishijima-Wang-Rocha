@@ -64,9 +64,9 @@ else if (n < -1) {  /* Decoding Part */
 
 /*
 int main(){
-	std::vector<uint32_t> blocks;
-	blocks.push_back(2882343476);  // ABCD1234 hex
-	blocks.push_back(3455023248);  // CDEF7890 hex
+	uint32_t blocks[2];
+	blocks[0] = 2882343476;  // ABCD1234 hex
+	blocks[1] = 3455023248;  // CDEF7890 hex
 
 	// Before encryption
 	std::cout << blocks[0] << std::endl;
@@ -74,8 +74,7 @@ int main(){
 	
 	uint32_t const teakey[4] = {2712847316, 3858147256, 3385909746, 2746533334};  // [A1B2C3D4, E5F6A7B8, C9D0E1F2, A3B4C5D6]
 	
-	btea(&blocks[0], 2, teakey);
-	btea(&blocks[1], 2, teakey);
+	btea(blocks, 2, teakey);
 	
 	// After encryption
 	std::cout << blocks[0] << std::endl;
@@ -83,4 +82,4 @@ int main(){
 	
 	return 0;
 }
-*/
+//*/

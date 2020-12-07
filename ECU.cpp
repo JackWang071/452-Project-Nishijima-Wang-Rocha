@@ -6,10 +6,10 @@
 
 int ECU::ID_vals = 0;
 
-ECU::ECU() : CAN_Component::CAN_Component() {
+ECU::ECU(Bus* new_bus) : CAN_Component::CAN_Component() {
 	ECU::bus = new_bus;
 	
-	ECU::bus.test_conn();
+	ECU::bus->test_conn();
 	
 	ECU::msg_idx = 0;
 	ECU::bitclock = 0;
@@ -19,11 +19,6 @@ ECU::ECU() : CAN_Component::CAN_Component() {
 	ECU::ones_count = 0;
 	ECU::msg_ends.push_back(0);
 	
-}
-
-int ECU::connect_component(CAN_Component& new_comp){
-	ECU::bus = new_comp;
-	return 0;
 }
 
 int ECU::test_conn(){
@@ -57,6 +52,7 @@ int ECU::recv_msg(bool nextbit){
 			std::cout << "ECU-" << ECU::ECU_ID << " pauses." << std::endl;
 		}
 	}
+	
 	if(nextbit == 1){
 		ECU::ones_count++;
 		if(ECU::ones_count == 9){
@@ -73,6 +69,9 @@ int ECU::recv_msg(bool nextbit){
 
 // Parse and decrypt completed messages
 int ECU::decrypt(int msg_begin, int msg_end){
+	
+	std::cout<<msg_begin<<" " << msg_end << " " << ECU::recv_buffer.size() << std::endl;
+	
 	std::string bitstream = "";
 	for(int i = msg_begin; i < msg_end; i++){
 		bitstream += std::to_string(ECU::recv_buffer[i]);
@@ -93,7 +92,7 @@ int ECU::sending(){
 	std::cout << "ECU-" << ECU::ECU_ID << " active." << std::endl;
 	
 	int num_messages = 0;
-	while(num_messages < 20){
+	while(num_messages < 3){
 		ECU::bitclock++;
 		/** Send the next bit of my message if all of these are true:
 		 *	Nobody else is sending
@@ -101,8 +100,8 @@ int ECU::sending(){
 		 *	There are unsent bits in my message
 		 */
 		if (ECU::msg_idx < ECU::send_buffer.size() && ECU::bitclock >= ECU::until_transmit_start){
-			ECU::bus.recv_msg(ECU::send_buffer[ECU::msg_idx]);
-			//std::cout << ECU::send_buffer[ECU::msg_idx];
+			ECU::bus->rebroadcast(ECU::send_buffer[ECU::msg_idx]);
+			std::cout << ECU::send_buffer[ECU::msg_idx];
 			ECU::msg_idx++;
 		}
 		if (ECU::msg_idx == ECU::send_buffer.size()) {

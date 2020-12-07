@@ -4,25 +4,26 @@
 
 #include "Bus.h"
 
-Bus::Bus() : CAN_Component::CAN_Component() {}
+int Bus::bus_ID_vals = 0;
 
-int Bus::connect_component(CAN_Component& new_comp){
-	ecu_list.push_back(new_comp);
-	new_comp.test_conn();
+Bus::Bus(){
+	Bus::bus_ID = ++bus_ID_vals;
+}
+
+int Bus::connect_node(CAN_Component* new_comp){
+	Bus::ecu_list.push_back(new_comp);
+	Bus::ecu_list.back()->test_conn();
 	return 0;
 }
 
 int Bus::test_conn(){
-	std::cout<<"Bus is connected."<<std::endl;
+	std::cout<<"Bus-"<<Bus::bus_ID<< " is connected."<<std::endl;
 	return 0;
 }
 
-int Bus::recv_msg(bool nextbit){
-	
-	std::cout<<nextbit<<std::endl;
-	
+int Bus::rebroadcast(bool nextbit){
 	for(int i = 0; i < ecu_list.size(); i++){
-		ecu_list[i].recv_msg(nextbit);
+		Bus::ecu_list[i]->recv_msg(nextbit);
 	}
 	
 	return 0;

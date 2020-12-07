@@ -5,16 +5,15 @@
 
 int main(){
 	
-	CAN_Component bus = Bus();
-	CAN_Component ecu1 = ECU(bus);
-	CAN_Component ecu2 = ECU(bus);
-	bus.connect_component(ecu1);
-	bus.connect_component(ecu2);
+	Bus* bus = new Bus();
+	ECU* ecu1 = new ECU(bus);
+	ECU* ecu2 = new ECU(bus);
+	bus->connect_node(ecu1);
+	bus->connect_node(ecu2);
 	
-	//std::thread e1_send(&ECU::sending, ecu1);
+	std::thread e1_send(&ECU::sending, ecu1);
 	//std::thread e2_send(&ECU::sending, ecu2);
-	
-	//e1_send.join();
+	e1_send.join();
 	//e2_send.join();
 	//*/
 	

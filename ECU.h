@@ -17,7 +17,7 @@
 
 class ECU : public CAN_Component{
 	private:
-	CAN_Component bus;
+	Bus* bus;
 	uint32_t const teakey[4] = {2712847316, 3858147256, 3385909746, 2746533334};
 	std::vector<bool> recv_buffer;
 	std::vector<bool> send_buffer;
@@ -32,9 +32,8 @@ class ECU : public CAN_Component{
 	static int ID_vals;
 	
 	public:
-	ECU();
+	ECU(Bus* new_bus);
 	int test_conn();
-	int connect_component(CAN_Component& new_comp);
 	bool arbitration(std::vector<bool> my_msg);
 	int recv_msg(bool nextbit);
 	int decrypt(int msg_begin, int msg_end);

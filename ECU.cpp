@@ -53,6 +53,7 @@ int ECU::recv_msg(bool nextbit){
 		}
 	}
 	
+	// If an EOF field is detected, the ECU attempts to parse the newest message
 	if(nextbit == 1){
 		ECU::ones_count++;
 		if(ECU::ones_count == 9){
@@ -69,28 +70,34 @@ int ECU::recv_msg(bool nextbit){
 
 // Parse and decrypt completed messages
 int ECU::decrypt(int msg_begin, int msg_end){
-	
-	std::cout<<msg_begin<<" " << msg_end << " " << ECU::recv_buffer.size() << std::endl;
-	
+	// Extract the newest message from the receive buffer
 	std::string bitstream = "";
 	for(int i = msg_begin; i < msg_end; i++){
 		bitstream += std::to_string(ECU::recv_buffer[i]);
 	}
-	std::bitset<32> data1(bitstream.substr(msg_begin, 32));
-	std::bitset<32> data2(bitstream.substr(msg_begin+32, 32));
+	
+	std::cout << "ECU-" << ECU::ECU_ID << " receives " << bitstream << std::endl;
+	
+	// Extract the data field
+	std::bitset<32> data64_32(bitstream.substr(19, 32));
+	std::bitset<32> data32_0(bitstream.substr(51, 32));
+	
+	std::cout << "ECU-" << ECU::ECU_ID << " parses data " << data64_32.to_string() + data32_0.to_string() << std::endl;
+		
+	// Decrypt the data field
 	uint32_t data_arr[2];
-	data_arr[0] = (uint32_t) data1.to_ulong();
-	data_arr[1] = (uint32_t) data2.to_ulong();
+	data_arr[0] = (uint32_t) data32_0.to_ulong();
+	data_arr[1] = (uint32_t) data64_32.to_ulong();
 	btea(data_arr, -2, ECU::teakey);
 	
-	std::cout<<"ECU-"<<ECU::ECU_ID<<" receives "<<data_arr[1]<<" "<<data_arr[0]<<std::endl;
+	std::cout<<"ECU-"<<ECU::ECU_ID<<" decrypts: "<<data_arr[1]<<" "<<data_arr[0]<<std::endl;
 }
 
 // Infinite loop to allow ECU to generate and send messages
 int ECU::sending(){
 	// Print message to show that this ECU is active.
 	std::cout << "ECU-" << ECU::ECU_ID << " active." << std::endl;
-	
+
 	int num_messages = 0;
 	while(num_messages < 3){
 		ECU::bitclock++;
@@ -104,7 +111,7 @@ int ECU::sending(){
 			std::cout << ECU::send_buffer[ECU::msg_idx];
 			ECU::msg_idx++;
 		}
-		if (ECU::msg_idx == ECU::send_buffer.size()) {
+		if (ECU::msg_idx >= ECU::send_buffer.size()) {
 			msg_idx++;
 			num_messages++;
 			std::cout<<std::endl;
@@ -115,7 +122,7 @@ int ECU::sending(){
 			ECU::send_buffer = generate_msg();
 			ECU::msg_idx = 0;
 			
-			std::cout << "ECU-" << ECU::ECU_ID << ": Sending ";
+			std::cout << "ECU-" << ECU::ECU_ID << " sends ";
 		}
 	}
 	return 0;
@@ -146,6 +153,8 @@ std::vector<bool> ECU::generate_msg(){
 	std::bitset<32> data64_32 (data_arr[1]);
 	std::bitset<64> data_bitset (data64_32.to_string() + data32_0.to_string());
 	std::bitset<15> crc_bitset (9999);
+	
+	std::cout<< "ECU-" << ECU::ECU_ID << ": " <<data_bitset <<std::endl;
 	
 	// Create a vector of booleans to represent this message
 	std::vector<bool> frame;

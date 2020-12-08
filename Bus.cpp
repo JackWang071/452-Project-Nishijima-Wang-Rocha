@@ -17,7 +17,7 @@ int Bus::connect_node(CAN_Component* new_comp){
 }
 
 int Bus::test_conn(){
-	std::cout<<"Bus-"<<Bus::bus_ID<< " is connected."<<std::endl;
+	std::cout<<"C Bus-"<<Bus::bus_ID<< " connected."<<std::endl;
 	return 0;
 }
 

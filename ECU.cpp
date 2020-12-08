@@ -20,7 +20,7 @@ ECU::ECU(Bus* new_bus, bool encrypt_opt) : CAN_Component::CAN_Component() {
 }
 
 int ECU::test_conn(){
-	std::cout << "ECU-" << ECU::ECU_ID << " is connected." << std::endl;
+	std::cout << "C ECU-" << ECU::ECU_ID << " connected." << std::endl;
 	return 0;
 }
 
@@ -36,13 +36,13 @@ int ECU::recv_msg(int nextbit){
 			// Theoretically should avoid the ECU from stopping transmission because of its own bits
 			if(nextbit != (int)ECU::send_buffer[ECU::msg_idx] - 48){
 				ECU::until_transmit_start = ECU::bitclock + 120;
-				std::cout << "ECU-" << ECU::ECU_ID << " pauses" << std::endl;
+				std::cout << "W ECU-" << ECU::ECU_ID << " waits" << std::endl;
 			}
 		}
 		// If this ECU is not sending but still receiving outside bits, then force transmission to pause for a while
 		else{
 			ECU::until_transmit_start = ECU::bitclock + 120;
-			std::cout << "ECU-" << ECU::ECU_ID << " pauses" << std::endl;
+			std::cout << "W ECU-" << ECU::ECU_ID << " waits" << std::endl;
 		}
 	}
 	
@@ -69,7 +69,7 @@ int ECU::decrypt(int msg_begin, int msg_end){
 		bitstream += (char) (ECU::recv_buffer[i] + 48);
 	}
 	
-	std::cout << "ECU-" << ECU::ECU_ID << " recv " << bitstream << std::endl;
+	std::cout << "R ECU-" << ECU::ECU_ID << " " << bitstream << std::endl;
 	
 	// Extract the data field
 	std::bitset<32> data64_32(bitstream.substr(19, 32));
@@ -80,11 +80,11 @@ int ECU::decrypt(int msg_begin, int msg_end){
 	data_arr[0] = (uint32_t) data32_0.to_ulong();
 	data_arr[1] = (uint32_t) data64_32.to_ulong();
 	
-	std::cout<<"ECU-"<<ECU::ECU_ID<<" parses data "<<data_arr[1]<<" "<<data_arr[0];
+	std::cout<<"P ECU-"<<ECU::ECU_ID<<" "<<data_arr[1]<<" "<<data_arr[0];
 	
 	if(ECU::encrypt == true){
 		btea(data_arr, -2, ECU::teakey);
-		std::cout<<" and decrypts to " << data_arr[1] <<" "<<data_arr[0];
+		std::cout<<" > " << data_arr[1] <<" "<<data_arr[0];
 	}
 	std::cout<<std::endl;
 }
@@ -119,7 +119,7 @@ int ECU::sending(int max_num_msgs){
 			generate_msg();
 			ECU::msg_idx = 0;
 			
-			std::cout << "ECU-" << ECU::ECU_ID << " send " << ECU::send_buffer << std::endl;
+			std::cout << "S ECU-" << ECU::ECU_ID << " " << ECU::send_buffer << std::endl;
 		}
 	}
 	return 0;
@@ -132,12 +132,12 @@ int ECU::generate_msg(){
 	data_arr[0] = (uint32_t) rand();
 	data_arr[1] = (uint32_t) rand();
 	
-	std::cout<< "ECU-" << ECU::ECU_ID << " generates " <<data_arr[1]<<" "<<data_arr[0];
+	std::cout<< "G ECU-" << ECU::ECU_ID << " " <<data_arr[1]<<" "<<data_arr[0];
 	
 	// If encrypt is true:
 	if(ECU::encrypt == true){
 		btea(data_arr, 2, ECU::teakey);
-		std::cout<< " and encrypts to " << data_arr[1]<<" "<<data_arr[0];
+		std::cout<< " > " << data_arr[1]<<" "<<data_arr[0];
 	}
 	
 	std::cout<<std::endl;

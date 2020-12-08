@@ -51,8 +51,9 @@ int ECU::recv_msg(int nextbit){
 		ECU::ones_count++;
 		if(ECU::ones_count == 9){
 			ECU::ones_count = 0;
-			decrypt(ECU::msg_ends.back(), ECU::recv_buffer.size());
-			ECU::msg_ends.push_back(ECU::recv_buffer.size());
+			if(decrypt(ECU::msg_ends.back(), ECU::recv_buffer.size()) == 0){
+				ECU::msg_ends.push_back(ECU::recv_buffer.size());
+			}
 		}
 	}
 	else{
@@ -67,6 +68,11 @@ int ECU::decrypt(int msg_begin, int msg_end){
 	std::string bitstream = "";
 	for(int i = msg_begin; i < msg_end; i++){
 		bitstream += (char) (ECU::recv_buffer[i] + 48);
+	}
+	
+	// Make sure that the received message isn't incomplete
+	if(bitstream.size() < 83){
+		return 1;
 	}
 	
 	std::cout << "R ECU-" << ECU::ECU_ID << " " << bitstream << std::endl;
@@ -84,9 +90,10 @@ int ECU::decrypt(int msg_begin, int msg_end){
 	
 	if(ECU::encrypt == true){
 		btea(data_arr, -2, ECU::teakey);
-		std::cout<<" > " << data_arr[1] <<" "<<data_arr[0];
+		std::cout<<" decrypts " << data_arr[1] <<" "<<data_arr[0];
 	}
 	std::cout<<std::endl;
+	return 0;
 }
 
 // Infinite loop to allow ECU to generate and send messages
@@ -137,7 +144,7 @@ int ECU::generate_msg(){
 	// If encrypt is true:
 	if(ECU::encrypt == true){
 		btea(data_arr, 2, ECU::teakey);
-		std::cout<< " > " << data_arr[1]<<" "<<data_arr[0];
+		std::cout<< " encrypts " << data_arr[1]<<" "<<data_arr[0];
 	}
 	
 	std::cout<<std::endl;

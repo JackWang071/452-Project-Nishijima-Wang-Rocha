@@ -19,7 +19,7 @@ class Bus {
 	public:
 	Bus();
 	int connect_node(CAN_Component* new_comp);
-	int rebroadcast(bool nextbit);
+	int rebroadcast(int nextbit);
 	int test_conn();
 };
 

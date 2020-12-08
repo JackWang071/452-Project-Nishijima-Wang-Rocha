@@ -1,9 +1,11 @@
-
+#include <iostream>
 #include <thread>
 #include "ECU.h"
 #include "Bus.h"
 
 int main(){
+	
+	std::cout<<"Proof of concept"<<std::endl;
 	
 	Bus* bus = new Bus();
 	ECU* ecu1 = new ECU(bus);
@@ -12,10 +14,7 @@ int main(){
 	bus->connect_node(ecu2);
 	
 	std::thread e1_send(&ECU::sending, ecu1);
-	std::thread e2_send(&ECU::sending, ecu2);
 	e1_send.join();
-	e2_send.join();
-	//*/
 	
 	return 0;
 }

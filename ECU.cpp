@@ -37,13 +37,13 @@ int ECU::recv_msg(int nextbit){
 			// Theoretically should avoid the ECU from stopping transmission because of its own bits
 			if(nextbit < (int)ECU::send_buffer[ECU::msg_idx] - 48){
 				ECU::until_transmit_start = ECU::bitclock + 120;
-				std::cout << "\nECU-" << ECU::ECU_ID << " pauses." << std::endl;
+				std::cout << "ECU-" << ECU::ECU_ID << " pauses" << std::endl;
 			}
 		}
 		// If this ECU is not sending but still receiving outside bits, then force transmission to pause for a while
 		else{
 			ECU::until_transmit_start = ECU::bitclock + 120;
-			std::cout << "\nECU-" << ECU::ECU_ID << " pauses." << std::endl;
+			std::cout << "ECU-" << ECU::ECU_ID << " pauses" << std::endl;
 		}
 	}
 	
@@ -70,6 +70,8 @@ int ECU::decrypt(int msg_begin, int msg_end){
 		bitstream += (char) (ECU::recv_buffer[i] + 48);
 	}
 	
+	std::cout << "ECU-" << ECU::ECU_ID << " recv " << bitstream << std::endl;
+	
 	// Extract the data field
 	std::bitset<32> data64_32(bitstream.substr(19, 32));
 	std::bitset<32> data32_0(bitstream.substr(51, 32));
@@ -79,12 +81,13 @@ int ECU::decrypt(int msg_begin, int msg_end){
 	data_arr[0] = (uint32_t) data32_0.to_ulong();
 	data_arr[1] = (uint32_t) data64_32.to_ulong();
 	
-	std::cout<<"\nECU-"<<ECU::ECU_ID<<" parses data "<<data_arr[1]<<" "<<data_arr[0];
+	std::cout<<"ECU-"<<ECU::ECU_ID<<" parses data "<<data_arr[1]<<" "<<data_arr[0];
 	
 	if(ECU::encrypt == true){
 		btea(data_arr, -2, ECU::teakey);
 		std::cout<<" and decrypts to " << data_arr[1] <<" "<<data_arr[0];
 	}
+	std::cout<<std::endl;
 }
 
 // Infinite loop to allow ECU to generate and send messages
@@ -93,7 +96,7 @@ int ECU::sending(){
 	std::cout << "ECU-" << ECU::ECU_ID << " active." << std::endl;
 
 	int num_messages = 0;
-	while(num_messages < 3){
+	while(num_messages < 7){
 		ECU::bitclock++;
 		/** Send the next bit of my message if all of these are true:
 		 *	Nobody else is sending
@@ -102,12 +105,12 @@ int ECU::sending(){
 		 */
 		
 		if (ECU::msg_idx < ECU::send_buffer.size() && ECU::bitclock >= ECU::until_transmit_start){
-			std::cout << ECU::send_buffer[ECU::msg_idx];
+			//std::cout << ECU::send_buffer[ECU::msg_idx];
 			ECU::bus->rebroadcast((int) ECU::send_buffer[ECU::msg_idx] - 48);
 			ECU::msg_idx++;
 		}
 		if (ECU::msg_idx == ECU::send_buffer.size()) {
-			std::cout<<std::endl;
+			//std::cout<<std::endl;
 			msg_idx++;
 			num_messages++;
 		}
@@ -117,7 +120,7 @@ int ECU::sending(){
 			generate_msg();
 			ECU::msg_idx = 0;
 			
-			std::cout << "ECU-" << ECU::ECU_ID << " << ";
+			std::cout << "ECU-" << ECU::ECU_ID << " send " << ECU::send_buffer << std::endl;
 		}
 	}
 	return 0;

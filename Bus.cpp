@@ -21,7 +21,7 @@ int Bus::test_conn(){
 	return 0;
 }
 
-int Bus::rebroadcast(bool nextbit){
+int Bus::rebroadcast(int nextbit){
 	for(int i = 0; i < ecu_list.size(); i++){
 		Bus::ecu_list[i]->recv_msg(nextbit);
 	}

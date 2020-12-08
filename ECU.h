@@ -19,13 +19,14 @@ class ECU : public CAN_Component{
 	private:
 	Bus* bus;
 	uint32_t const teakey[4] = {2712847316, 3858147256, 3385909746, 2746533334};
-	std::vector<bool> recv_buffer;
-	std::vector<bool> send_buffer;
+	std::vector<int> recv_buffer;
+	std::string send_buffer;
 	std::vector<int> msg_ends;
 	int msg_idx;
 	int bitclock;
 	int until_transmit_start;
 	int ECU_ID;
+	bool encrypt;
 	
 	int ones_count;
 
@@ -34,11 +35,10 @@ class ECU : public CAN_Component{
 	public:
 	ECU(Bus* new_bus);
 	int test_conn();
-	bool arbitration(std::vector<bool> my_msg);
-	int recv_msg(bool nextbit);
+	int recv_msg(int nextbit);
 	int decrypt(int msg_begin, int msg_end);
 	int sending();
-	std::vector<bool> generate_msg();
+	int generate_msg();
 };
 
 #endif // !ECU_H

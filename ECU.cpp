@@ -6,7 +6,7 @@
 
 int ECU::ID_vals = 0;
 
-ECU::ECU(Bus* new_bus) : CAN_Component::CAN_Component() {
+ECU::ECU(Bus* new_bus, bool encrypt_opt) : CAN_Component::CAN_Component() {
 	ECU::bus = new_bus;
 	ECU::bus->test_conn();
 	
@@ -16,8 +16,7 @@ ECU::ECU(Bus* new_bus) : CAN_Component::CAN_Component() {
 	ECU::ECU_ID = ++ECU::ID_vals;
 	ECU::ones_count = 0;
 	ECU::msg_ends.push_back(0);
-	
-	ECU::encrypt = true;
+	ECU::encrypt = encrypt_opt;
 }
 
 int ECU::test_conn(){
@@ -33,9 +32,9 @@ int ECU::recv_msg(int nextbit){
 	if(ECU::bitclock >= ECU::until_transmit_start){
 		// If this ECU is still sending:
 		if(ECU::msg_idx < ECU::send_buffer.size()){
-			// If nextbit is 0 and the current bit being sent is 1, force transmission to pause for a while
+			// If nextbit different from the current bit being sent, force transmission to pause for a while
 			// Theoretically should avoid the ECU from stopping transmission because of its own bits
-			if(nextbit < (int)ECU::send_buffer[ECU::msg_idx] - 48){
+			if(nextbit != (int)ECU::send_buffer[ECU::msg_idx] - 48){
 				ECU::until_transmit_start = ECU::bitclock + 120;
 				std::cout << "ECU-" << ECU::ECU_ID << " pauses" << std::endl;
 			}
@@ -91,12 +90,12 @@ int ECU::decrypt(int msg_begin, int msg_end){
 }
 
 // Infinite loop to allow ECU to generate and send messages
-int ECU::sending(){
+int ECU::sending(int max_num_msgs){
 	// Print message to show that this ECU is active.
 	std::cout << "ECU-" << ECU::ECU_ID << " active." << std::endl;
 
 	int num_messages = 0;
-	while(num_messages < 7){
+	while(num_messages < max_num_msgs){
 		ECU::bitclock++;
 		/** Send the next bit of my message if all of these are true:
 		 *	Nobody else is sending

@@ -11,8 +11,8 @@ int main(){
 	bus->connect_node(ecu1);
 	bus->connect_node(ecu2);
 	
-	std::thread e1_send(&ECU::sending, ecu1);
-	std::thread e2_send(&ECU::sending, ecu2);
+	std::thread e1_send(&ECU::sending, ecu1, 5);
+	std::thread e2_send(&ECU::sending, ecu2, 5);
 	e1_send.join();
 	e2_send.join();
 	//*/
